@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>内視鏡ナビ（デモ）</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Old+Mincho:wght@400;600;900&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F1F4F1; --bg-card:#FFFFFF; --bg-alt:#E7EDE8;
+    --ink:#1F2E28; --ink-soft:#4A5C54; --muted:#8A9B93;
+    --teal:#3E7C74; --teal-deep:#2C5951;
+    --coral:#E8896B; --coral-deep:#D06B4C;
+    --danger:#C1443C; --danger-bg:#FBEAE8;
+    --ok:#3E7C74; --ok-bg:#E4EFEA;
+    --line:#D5DED8;
+    --font-display:'Zen Old Mincho', serif;
+    --font-body:'Zen Kaku Gothic New', sans-serif;
+    --font-mono:'JetBrains Mono', monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{background:var(--bg);color:var(--ink);font-family:var(--font-body);line-height:1.7;-webkit-font-smoothing:antialiased;}
+  ::selection{background:var(--teal);color:#fff;}
+  button{font-family:var(--font-body);cursor:pointer;}
+  :focus-visible{outline:3px solid var(--coral);outline-offset:2px;}
+  .app{max-width:720px;margin:0 auto;padding:0 0 80px;min-height:100vh;}
+
+  .demo-ribbon{background:var(--coral);color:#fff;text-align:center;font-size:11px;font-weight:700;padding:5px;letter-spacing:.05em;}
+
+  header.top{padding:22px 20px 16px;position:sticky;top:0;z-index:20;background:linear-gradient(180deg, var(--bg) 80%, transparent);}
+  .brand{display:flex;align-items:baseline;justify-content:space-between;gap:12px;}
+  .brand h1{font-family:var(--font-display);font-weight:900;font-size:21px;margin:0;letter-spacing:.02em;}
+  .brand h1 small{display:block;font-family:var(--font-body);font-weight:500;font-size:11px;color:var(--muted);letter-spacing:.06em;margin-top:2px;}
+  .tag-role{font-size:10.5px;background:var(--bg-alt);color:var(--teal-deep);padding:4px 10px;border-radius:20px;font-weight:700;white-space:nowrap;}
+  .back-link{font-size:11px;color:var(--muted);background:none;border:none;text-decoration:underline;padding:4px;}
+
+  .phase-banner{margin-top:14px;border-radius:14px;padding:18px 20px;background:var(--bg-card);border:1px solid var(--line);display:flex;align-items:center;gap:16px;}
+  .phase-banner .dot{width:14px;height:14px;border-radius:50%;flex:0 0 auto;background:var(--teal);box-shadow:0 0 0 5px rgba(62,124,116,.15);}
+  .phase-banner.examday .dot{background:var(--coral);box-shadow:0 0 0 5px rgba(232,137,107,.22);animation:pulse 1.8s infinite;}
+  .phase-banner.alert{background:var(--danger-bg);border-color:#EBC6C2;}
+  .phase-banner.alert .dot{background:var(--danger);box-shadow:0 0 0 5px rgba(193,68,60,.18);}
+  @keyframes pulse{0%,100%{transform:scale(1);}50%{transform:scale(1.35);}}
+  .phase-text .label{font-size:12px;color:var(--muted);}
+  .phase-text .value{font-family:var(--font-display);font-weight:600;font-size:17px;margin-top:2px;}
+  .phase-count{margin-left:auto;text-align:right;font-family:var(--font-mono);}
+  .phase-count .n{font-size:26px;font-weight:700;color:var(--teal-deep);line-height:1;}
+  .phase-count .u{font-size:10.5px;color:var(--muted);}
+
+  .spine-wrap{padding:6px 20px 4px;}
+  .spine{display:flex;align-items:flex-start;justify-content:space-between;position:relative;padding-top:6px;}
+  .spine::before{content:"";position:absolute;top:16px;left:22px;right:22px;height:2px;background:var(--line);z-index:0;}
+  .spine-node{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;}
+  .spine-node .pt{width:11px;height:11px;border-radius:50%;background:var(--bg-card);border:2px solid var(--muted);}
+  .spine-node.done .pt{background:var(--teal);border-color:var(--teal);}
+  .spine-node.current .pt{background:var(--coral);border-color:var(--coral);width:14px;height:14px;box-shadow:0 0 0 4px rgba(232,137,107,.25);}
+  .spine-node .lbl{font-size:10px;color:var(--muted);text-align:center;}
+  .spine-node.current .lbl{color:var(--ink);font-weight:700;}
+
+  nav.tabs{display:flex;gap:2px;padding:16px 20px 0;overflow-x:auto;}
+  nav.tabs button{flex:0 0 auto;background:none;border:none;padding:9px 12px;font-size:12.5px;font-weight:700;color:var(--muted);border-bottom:3px solid transparent;white-space:nowrap;}
+  nav.tabs button.active{color:var(--teal-deep);border-color:var(--coral);}
+
+  main{padding:18px 20px 40px;}
+  .panel{display:none;animation:fade .25s ease;}
+  .panel.active{display:block;}
+  @keyframes fade{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
+
+  section.card{background:var(--bg-card);border:1px solid var(--line);border-radius:14px;padding:20px;margin-bottom:16px;}
+  section.card h2{font-family:var(--font-display);font-size:16px;margin:0 0 4px;}
+  section.card .sub{font-size:12px;color:var(--muted);margin-bottom:14px;}
+
+  .note{font-size:12px;color:var(--ink-soft);background:var(--bg-alt);border-left:3px solid var(--teal);padding:10px 12px;border-radius:0 8px 8px 0;margin:12px 0;}
+  .note.warn{background:var(--danger-bg);border-color:var(--danger);color:#7A2A25;}
+
+  .check-item{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);}
+  .check-item:last-child{border-bottom:none;}
+  .check-item input[type=checkbox]{width:19px;height:19px;margin-top:2px;accent-color:var(--teal);flex:0 0 auto;}
+  .check-item label{font-size:14px;flex:1;}
+  .check-item.done label{color:var(--muted);text-decoration:line-through;}
+  .check-item .time{font-size:11px;color:var(--coral-deep);font-family:var(--font-mono);white-space:nowrap;}
+
+  .food-grid{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;}
+  .food-chip{font-size:12.5px;padding:6px 12px;border-radius:20px;background:var(--ok-bg);color:var(--teal-deep);}
+  .food-chip.avoid{background:var(--danger-bg);color:#7A2A25;}
+
+  .step-row{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px dashed var(--line);font-size:13.5px;}
+  .step-row:last-child{border-bottom:none;}
+  .step-row .t{font-family:var(--font-mono);color:var(--teal-deep);font-weight:700;min-width:56px;}
+  .rest-note{text-align:center;font-size:11.5px;color:var(--muted);padding:8px 0;}
+
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;background:var(--teal);color:#fff;border:none;border-radius:10px;padding:12px 18px;font-size:14px;font-weight:700;}
+  .btn:hover{background:var(--teal-deep);}
+  .btn.ghost{background:none;color:var(--teal-deep);border:1.5px solid var(--teal);}
+  .btn.block{width:100%;}
+  .btn:disabled{opacity:.45;cursor:not-allowed;}
+
+  input[type=date],input[type=time],input[type=text],select,textarea{font-family:var(--font-body);font-size:14px;border:1.5px solid var(--line);border-radius:8px;padding:10px 12px;width:100%;background:#fff;color:var(--ink);}
+  label.field{display:block;font-size:12.5px;color:var(--ink-soft);margin:14px 0 5px;font-weight:700;}
+
+  .seg{display:flex;gap:8px;flex-wrap:wrap;}
+  .seg button{border:1.5px solid var(--line);background:#fff;border-radius:20px;padding:9px 14px;font-size:13px;color:var(--ink-soft);font-weight:600;}
+  .seg button.sel{background:var(--teal);border-color:var(--teal);color:#fff;}
+  .seg button.sel.danger-sel{background:var(--danger);border-color:var(--danger);}
+
+  .log-entry{padding:12px 0;border-bottom:1px solid var(--line);}
+  .log-entry:last-child{border-bottom:none;}
+  .log-entry .d{font-family:var(--font-mono);font-size:11.5px;color:var(--muted);}
+  .log-entry .tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;}
+  .tag{font-size:11px;padding:3px 9px;border-radius:20px;background:var(--bg-alt);color:var(--ink-soft);}
+  .tag.danger{background:var(--danger-bg);color:var(--danger);font-weight:700;}
+  .log-entry .memo{font-size:13px;margin-top:6px;color:var(--ink-soft);}
+
+  /* food search */
+  .food-result{border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-top:10px;}
+  .food-result .verdict{display:flex;align-items:center;gap:8px;font-family:var(--font-display);font-weight:600;font-size:16px;}
+  .food-result.ok{background:var(--ok-bg);border-color:#B9D4C6;}
+  .food-result.ok .verdict{color:var(--teal-deep);}
+  .food-result.ng{background:var(--danger-bg);border-color:#EBC6C2;}
+  .food-result.ng .verdict{color:var(--danger);}
+  .food-result.confirm{background:#FBF3E6;border-color:#E8D4A8;}
+  .food-result.confirm .verdict{color:#9A6A16;}
+  .food-result .why{font-size:13px;color:var(--ink-soft);margin-top:6px;}
+  .food-result .alt{font-size:12.5px;color:var(--teal-deep);margin-top:6px;}
+  .cat-chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px;}
+  .cat-chips button{border:1.5px solid var(--line);background:#fff;border-radius:20px;padding:7px 13px;font-size:12.5px;color:var(--ink-soft);font-weight:600;}
+
+  /* chat */
+  .chat-log{display:flex;flex-direction:column;gap:10px;max-height:48vh;overflow-y:auto;padding:4px 2px 12px;}
+  .msg{max-width:86%;padding:11px 14px;border-radius:14px;font-size:13.5px;line-height:1.6;}
+  .msg.user{align-self:flex-end;background:var(--teal);color:#fff;border-bottom-right-radius:4px;}
+  .msg.ai{align-self:flex-start;background:var(--bg-alt);color:var(--ink);border-bottom-left-radius:4px;white-space:pre-wrap;}
+  .msg.sys{align-self:center;font-size:11.5px;color:var(--muted);background:none;text-align:center;}
+  .suggest-row{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px;}
+  .suggest-row button{border:1.5px solid var(--line);background:#fff;border-radius:16px;padding:7px 12px;font-size:12px;color:var(--teal-deep);font-weight:600;}
+
+  /* issue screen */
+  .setup-wrap{max-width:520px;margin:0 auto;padding:32px 24px;}
+  .setup-wrap h1{font-family:var(--font-display);font-size:23px;font-weight:900;margin-bottom:6px;text-align:center;}
+  .setup-wrap p.lead{color:var(--ink-soft);font-size:13.5px;margin-bottom:20px;text-align:center;}
+  .setup-card{background:var(--bg-card);border:1px solid var(--line);border-radius:16px;padding:24px;}
+  .qr-box{text-align:center;background:var(--bg-card);border:1px solid var(--line);border-radius:16px;padding:24px;margin-top:16px;}
+  #qrcode{display:flex;justify-content:center;margin:12px 0;}
+  .link-box{font-family:var(--font-mono);font-size:11px;background:var(--bg-alt);border-radius:8px;padding:10px;word-break:break-all;color:var(--ink-soft);margin:12px 0;}
+  .quick-demo{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;}
+  .quick-demo button{flex:1;min-width:150px;}
+
+  footer.credit{text-align:center;font-size:10.5px;color:var(--muted);padding:20px;}
+  @media (max-width:420px){.brand h1{font-size:18px;} .phase-count .n{font-size:22px;} nav.tabs button{font-size:11.5px;padding:8px 9px;}}
+</style>
+</head>
+<body>
+<div id="app" class="app"></div>
+
+<script>
+(function(){
+  const LAX = { mg:{name:"マグコロール"}, mp:{name:"モビプレップ"}, sp:{name:"サルプレップ"} };
+
+  const FOOD = {
+    categories:["主食","野菜","果物","たんぱく","乳製品","飲み物","その他"],
+    category_summary:{
+      "野菜":"食べてよい野菜は芋類（じゃがいも・やまいも）くらいです。葉物・にんじん・トマト・きのこ・海藻・ごぼう・豆類などは、繊維や皮・種が腸に残るため避けます。",
+      "果物":"りんご（皮なし）・バナナ・すりおろしりんごはOK。いちご・みかん・キウイ・スイカは種や薄皮が残るため避けます。",
+      "主食":"おかゆ・素うどん・食パン・白米はOK。そば・ラーメンは避けます。",
+      "たんぱく":"肉・魚・豆腐はOK（検査前日は普通に食べてよい指示です）。揚げ物は避けます。",
+      "乳製品":"牛乳・乳製品は避けます。",
+      "飲み物":"水・お茶・ミルクなしのコーヒー/紅茶・スポーツドリンク・果汁ジュースはOK。果肉入り・牛乳入りは不可です。",
+      "その他":"プリン・透明の飴はOK。胡麻は粒が残るため避けます。ジャムは種や果肉が含まれることがあるので確認を。"
+    },
+    items:[
+      {n:"おかゆ",c:"主食",ok:true,why:"消化が良い"},
+      {n:"白米",c:"主食",ok:true,why:"消化が良い（前日の朝昼は普通に食べてよい指示）",kw:["ごはん","ご飯","米"]},
+      {n:"素うどん",c:"主食",ok:true,why:"消化が良い",kw:["うどん"]},
+      {n:"食パン",c:"主食",ok:true,why:"消化が良い",kw:["パン"]},
+      {n:"そば",c:"主食",ok:false,why:"消化が悪い",alt:"素うどん・おかゆなら可"},
+      {n:"ラーメン",c:"主食",ok:false,why:"消化が悪い",alt:"素うどんなら可"},
+      {n:"豆腐",c:"たんぱく",ok:true,why:"消化が良い"},
+      {n:"肉",c:"たんぱく",ok:true,why:"前日は普通に食べてよい（脂の多い揚げ物は避ける）"},
+      {n:"魚",c:"たんぱく",ok:true,why:"前日は普通に食べてよい"},
+      {n:"天ぷら・揚げ物",c:"たんぱく",ok:false,why:"脂が多く消化に時間がかかる",kw:["揚げ物","フライ","てんぷら"]},
+      {n:"やまいも",c:"野菜",ok:true,why:"芋類は可",kw:["山芋","長芋","とろろ"]},
+      {n:"じゃがいも",c:"野菜",ok:true,why:"芋類は可（皮は食べない）",kw:["ポテト","芋"]},
+      {n:"菜っ葉・葉物野菜",c:"野菜",ok:false,why:"繊維が多く残渣になる",kw:["ほうれん草","小松菜","レタス","キャベツ","白菜","野菜"]},
+      {n:"にんじん",c:"野菜",ok:false,why:"繊維が多い",kw:["人参"]},
+      {n:"トマト",c:"野菜",ok:false,why:"皮・種が残渣になる",kw:["ミニトマト"]},
+      {n:"たまねぎ・ネギ",c:"野菜",ok:false,why:"繊維が多い",kw:["玉ねぎ","ねぎ","長ねぎ"]},
+      {n:"もやし",c:"野菜",ok:false,why:"繊維が多い"},
+      {n:"ごぼう",c:"野菜",ok:false,why:"繊維が非常に多い",kw:["牛蒡"]},
+      {n:"きのこ類",c:"野菜",ok:false,why:"消化されにくい",kw:["しいたけ","えのき","しめじ","まいたけ","きのこ"]},
+      {n:"海藻類",c:"野菜",ok:false,why:"消化されにくい",kw:["わかめ","ひじき","のり","昆布","もずく"]},
+      {n:"こんにゃく",c:"野菜",ok:false,why:"消化されにくい",kw:["蒟蒻","しらたき"]},
+      {n:"豆類",c:"野菜",ok:false,why:"皮・繊維が残渣になる",kw:["枝豆","大豆","納豆"]},
+      {n:"とうもろこし",c:"野菜",ok:false,why:"皮が消化されず残る",kw:["コーン","とうきび"]},
+      {n:"切り干し大根",c:"野菜",ok:false,why:"繊維が多い"},
+      {n:"胡麻",c:"その他",ok:false,why:"粒が残渣になる",kw:["ごま","ゴマ"]},
+      {n:"りんご",c:"果物",ok:true,why:"可（皮は食べない）",kw:["リンゴ","林檎","アップル"]},
+      {n:"すりおろしりんご",c:"果物",ok:true,why:"皮なし・すりおろしはより消化が良い",kw:["すりおろし","おろしりんご"]},
+      {n:"バナナ",c:"果物",ok:true,why:"可"},
+      {n:"いちご",c:"果物",ok:false,why:"種（つぶつぶ）が残渣になる",kw:["苺","ストロベリー"]},
+      {n:"みかん",c:"果物",ok:false,why:"薄皮・繊維が残る",kw:["ミカン","オレンジ","柑橘"]},
+      {n:"キウイ",c:"果物",ok:false,why:"種が残渣になる"},
+      {n:"スイカ",c:"果物",ok:false,why:"種が残渣になる",kw:["すいか","西瓜"]},
+      {n:"プリン",c:"その他",ok:true,why:"可"},
+      {n:"透明の飴",c:"その他",ok:true,why:"可",kw:["あめ","キャンディ"]},
+      {n:"ジャム",c:"その他",ok:false,why:"果肉・種が含まれることがある",confirm:true},
+      {n:"牛乳・乳製品",c:"乳製品",ok:false,why:"避ける対象",kw:["ミルク","チーズ","バター"]},
+      {n:"ヨーグルト",c:"乳製品",ok:false,why:"乳製品は避ける対象",confirm:true},
+      {n:"水",c:"飲み物",ok:true,why:"可"},
+      {n:"お茶",c:"飲み物",ok:true,why:"可",kw:["茶","麦茶","緑茶"]},
+      {n:"コーヒー",c:"飲み物",ok:true,why:"可（ミルクは入れない）",kw:["珈琲"]},
+      {n:"紅茶",c:"飲み物",ok:true,why:"可（ミルクは入れない）"},
+      {n:"スポーツドリンク",c:"飲み物",ok:true,why:"可",kw:["ポカリ","アクエリ"]},
+      {n:"果汁ジュース",c:"飲み物",ok:true,why:"果汁入りは可・炭酸OK（果肉入りは不可）",kw:["ジュース"]},
+      {n:"アルコール",c:"飲み物",ok:false,why:"前処置中は不可",kw:["お酒","ビール","酒"],confirm:true}
+    ]
+  };
+
+  // AIに質問 想定問答（簡易・ルール型）
+  const FAQ = [
+    {q:["水","お茶","飲","前日"], a:"検査前日の19時以降は絶食ですが、水・お茶は飲んで構いません。ミルク入りの飲み物は避けてください。"},
+    {q:["下剤","飲めない","まずい","つらい"], a:"下剤は一度に飲まず、コップ1杯を10〜15分かけてゆっくり飲むと楽になります。気分が悪くなったら無理をせず中断し、施設にご連絡ください。"},
+    {q:["薬","血圧","心臓","内服"], a:"血圧や心臓の薬など、事前に「飲んでよい」と指示された薬は当日も内服してください。判断に迷う薬は必ず主治医にご確認ください。"},
+    {q:["運転","車","帰り"], a:"鎮静剤（静脈麻酔）を使う場合は、当日の車・自転車・バイクの運転はできません。付き添いの方か公共交通機関でお越しください。"},
+    {q:["透明","便","終了","いつまで"], a:"排便がほぼ透明〜薄い黄色の水様便になったら、腸管洗浄剤の服用は終了です。全量飲んでも排便がない場合は施設にご連絡ください。"},
+    {q:["痛い","出血","発熱","めまい","吐き気"], a:"強い腹痛・多量の出血・発熱・めまい・吐き気などがある場合は、様子を見ずに検査を受けた医療機関へすぐご連絡ください。"},
+    {q:["食べていい","食事","何","野菜","果物"], a:"「食べ物検索」タブで食材やカテゴリごとに確認できます。迷うものは施設にご確認ください。"}
+  ];
+
+  function qs(){ return new URLSearchParams(window.location.search); }
+  function baseUrl(){ return window.location.origin + window.location.pathname; }
+  const app = document.getElementById("app");
+  const params = qs();
+
+  if(!params.has("date")) renderIssueScreen();
+  else renderPatientApp(params);
+
+  // ============ 発行画面 ============
+  function renderIssueScreen(){
+    app.innerHTML = `
+      <div class="demo-ribbon">デモ版 ｜ 医療者側・発行画面</div>
+      <div class="setup-wrap">
+        <h1>内視鏡ナビ ｜ 発行</h1>
+        <p class="lead">検査日と使用する下剤を選ぶと、患者さん専用リンク／QRコードを発行します。氏名・患者IDは入力・保存しません。</p>
+        <div class="setup-card">
+          <div class="quick-demo">
+            <button class="btn ghost" data-demo="y">サンプル発行（鎮静剤あり）</button>
+            <button class="btn ghost" data-demo="n">サンプル発行（鎮静剤なし）</button>
+          </div>
+          <div class="note" style="margin-top:14px;">上のボタンで、7/21・モビプレップの想定条件をすぐ試せます。下で個別に設定することもできます。</div>
+          <label class="field">検査日</label>
+          <input type="date" id="in-date">
+          <label class="field">来院時間</label>
+          <input type="time" id="in-arrive" value="11:30">
+          <label class="field">使用する下剤</label>
+          <div class="seg" id="seg-lax">
+            <button data-v="mg">マグコロール</button>
+            <button data-v="mp">モビプレップ</button>
+            <button data-v="sp">サルプレップ</button>
+          </div>
+          <label class="field">前日の下剤内服時刻</label>
+          <input type="time" id="in-pre" value="21:00">
+          <label class="field">当日の腸管洗浄剤 開始時刻</label>
+          <input type="time" id="in-wash" value="06:00">
+          <label class="field">鎮静剤の使用</label>
+          <div class="seg" id="seg-sed">
+            <button data-v="y">使用する</button>
+            <button data-v="n">使用しない</button>
+          </div>
+          <button class="btn block" id="btn-issue" style="margin-top:22px;" disabled>QR・リンクを発行する</button>
+        </div>
+        <div class="qr-box" id="qr-result" style="display:none;">
+          <div class="sub" style="color:var(--muted);font-size:12px;">この患者さん専用のリンクです</div>
+          <div id="qrcode"></div>
+          <div class="link-box" id="link-text"></div>
+          <button class="btn block" id="btn-preview">患者側の画面を開く</button>
+          <button class="btn ghost block" id="btn-copy" style="margin-top:8px;">リンクをコピー</button>
+        </div>
+      </div>
+    `;
+    let lax=null, sed=null;
+    const g = id=>document.getElementById(id);
+    function checkReady(){ g("btn-issue").disabled = !(g("in-date").value && lax && sed); }
+    g("in-date").addEventListener("change", checkReady);
+    document.querySelectorAll("#seg-lax button").forEach(b=>b.addEventListener("click",()=>{
+      document.querySelectorAll("#seg-lax button").forEach(x=>x.classList.remove("sel"));
+      b.classList.add("sel"); lax=b.dataset.v; checkReady();
+    }));
+    document.querySelectorAll("#seg-sed button").forEach(b=>b.addEventListener("click",()=>{
+      document.querySelectorAll("#seg-sed button").forEach(x=>x.classList.remove("sel"));
+      b.classList.add("sel"); sed=b.dataset.v; checkReady();
+    }));
+    function buildUrl(o){
+      const p=new URLSearchParams();
+      p.set("date",o.date); p.set("arrive",o.arrive); p.set("lax",o.lax);
+      p.set("pre",o.pre); p.set("wash",o.wash); p.set("sed",o.sed);
+      return baseUrl()+"?"+p.toString();
+    }
+    function drawQR(url){
+      const box=g("qrcode"); box.innerHTML="";
+      if(window.QRCode){
+        try{ new QRCode(box,{text:url,width:168,height:168,colorDark:"#1F2E28",colorLight:"#ffffff"}); return; }catch(e){}
+      }
+      box.innerHTML=`<div style="font-size:12px;color:var(--muted);padding:10px;">QRコードは通信環境により表示されないことがあります。下のリンクをそのままお使いください。</div>`;
+    }
+    function showQR(url){
+      g("qr-result").style.display="block";
+      g("link-text").textContent=url;
+      g("btn-preview").onclick=()=>{window.location.href=url;};
+      g("btn-copy").onclick=()=>{ (navigator.clipboard?navigator.clipboard.writeText(url):Promise.reject()).then(()=>{g("btn-copy").textContent="コピーしました";setTimeout(()=>g("btn-copy").textContent="リンクをコピー",1500);}).catch(()=>{ const t=g("link-text"); const r=document.createRange(); r.selectNode(t); const sel=window.getSelection(); sel.removeAllRanges(); sel.addRange(r); }); };
+      g("qr-result").scrollIntoView({behavior:"smooth"});
+      if(window.QRCode){ drawQR(url); return; }
+      // lazy-load the QR library, but never block the page on it
+      const s=document.createElement("script");
+      s.src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js";
+      s.onload=()=>drawQR(url);
+      s.onerror=()=>drawQR(url);
+      document.head.appendChild(s);
+      g("qrcode").innerHTML=`<div style="font-size:12px;color:var(--muted);padding:10px;">QRコードを読み込み中…</div>`;
+      setTimeout(()=>{ if(!window.QRCode) drawQR(url); }, 2500);
+    }
+    g("btn-issue").addEventListener("click",()=>{
+      showQR(buildUrl({date:g("in-date").value,arrive:g("in-arrive").value,lax,pre:g("in-pre").value,wash:g("in-wash").value,sed}));
+    });
+    document.querySelectorAll("[data-demo]").forEach(b=>b.addEventListener("click",()=>{
+      const d=new Date(); d.setDate(d.getDate()+2);
+      const iso=d.toISOString().slice(0,10);
+      showQR(buildUrl({date:iso,arrive:"11:30",lax:"mp",pre:"21:00",wash:"06:00",sed:b.dataset.demo}));
+    }));
+  }
+
+  // ============ 患者側 ============
+  const STORE_KEY = "colonoscopy-navi-demo-v3";
+  function loadLocal(){ try{const r=localStorage.getItem(STORE_KEY);return r?JSON.parse(r):{checked:{},logs:[]};}catch(e){return {checked:{},logs:[]};} }
+  function saveLocal(d){ try{localStorage.setItem(STORE_KEY,JSON.stringify(d));}catch(e){} }
+  let local = loadLocal();
+
+  function renderPatientApp(p){
+    const examDate=p.get("date"), arrive=p.get("arrive")||"", laxCode=p.get("lax")||"mp";
+    const pre=p.get("pre")||"21:00", wash=p.get("wash")||"06:00", sed=p.get("sed")||"n";
+    const lax=LAX[laxCode]||LAX.mp;
+
+    function daysUntil(){ const t=new Date();t.setHours(0,0,0,0); const ex=new Date(examDate+"T00:00:00"); return Math.round((ex-t)/86400000); }
+    function currentPhase(){ const d=daysUntil(); if(d>3)return"early"; if(d>=1)return"prep"; if(d===0)return"examday"; if(d>=-6)return"recovery"; return"followup"; }
+    function hasAlert(){ const t=new Date().toISOString().slice(0,10); return local.logs.some(l=>l.date===t&&l.danger); }
+
+    const phase=currentPhase(), d=daysUntil(), alert=hasAlert();
+    const PL={early:"検査に向けて準備期間中",prep:"前処置期間中",examday:"検査当日",recovery:"術後の経過観察中",followup:"結果説明を待っています"};
+
+    app.innerHTML = `
+      <div class="demo-ribbon">デモ版 ｜ 患者側・受け取った画面</div>
+      <header class="top">
+        <div class="brand">
+          <h1>内視鏡ナビ<small>${lax.name} ／ ${examDate}</small></h1>
+          <button class="back-link" id="btn-back">発行画面へ</button>
+        </div>
+        <div class="phase-banner ${phase==='examday'?'examday':''} ${alert?'alert':''}">
+          <div class="dot"></div>
+          <div class="phase-text"><div class="label">現在のフェーズ</div>
+            <div class="value">${alert?'⚠ 経過観察中・要確認の症状あり':PL[phase]}</div></div>
+          ${d>=0?`<div class="phase-count"><div class="n">${d}</div><div class="u">日後に検査</div></div>`
+            :`<div class="phase-count"><div class="n">${Math.abs(d)}</div><div class="u">日前に検査済み</div></div>`}
+        </div>
+        <div class="spine-wrap">${renderSpine(phase)}</div>
+        <nav class="tabs" id="tabs">
+          <button data-tab="home" class="active">ホーム</button>
+          <button data-tab="prep">前処置</button>
+          <button data-tab="wash">当日の内服</button>
+          <button data-tab="after">術後</button>
+          <button data-tab="food">食べ物検索</button>
+          <button data-tab="chat">AIに質問</button>
+        </nav>
+      </header>
+      <main>
+        <div class="panel active" data-panel="home">${renderHome()}</div>
+        <div class="panel" data-panel="prep">${renderPrep()}</div>
+        <div class="panel" data-panel="wash">${renderWash()}</div>
+        <div class="panel" data-panel="after">${renderAfter()}</div>
+        <div class="panel" data-panel="food">${renderFood()}</div>
+        <div class="panel" data-panel="chat">${renderChat()}</div>
+      </main>
+      <footer class="credit">デモ版｜記録はこの端末内にのみ保存されます</footer>
+    `;
+
+    document.getElementById("btn-back").addEventListener("click",()=>{ window.location.href=baseUrl(); });
+    document.querySelectorAll("#tabs button").forEach(b=>b.addEventListener("click",()=>{
+      document.querySelectorAll("#tabs button").forEach(x=>x.classList.remove("active"));
+      document.querySelectorAll(".panel").forEach(x=>x.classList.remove("active"));
+      b.classList.add("active");
+      document.querySelector(`.panel[data-panel="${b.dataset.tab}"]`).classList.add("active");
+    }));
+    wireChecklist(); wireAfter(); wireFood(); wireChat();
+
+    function renderSpine(phase){
+      const steps=[{k:"early",l:"準備"},{k:"prep",l:"前処置"},{k:"examday",l:"検査当日"},{k:"recovery",l:"経過観察"},{k:"followup",l:"結果説明"}];
+      const ci=steps.map(s=>s.k).indexOf(phase);
+      return `<div class="spine">`+steps.map((s,i)=>`<div class="spine-node ${i<ci?'done':i===ci?'current':''}"><div class="pt"></div><div class="lbl">${s.l}</div></div>`).join("")+`</div>`;
+    }
+    function renderHome(){
+      let b="";
+      if(alert) b+=`<section class="card"><h2>⚠ 確認が必要な症状が記録されています</h2><p class="note warn">様子見をせず、検査を受けた医療機関へご連絡ください。</p></section>`;
+      b+=`<section class="card"><h2>検査の基本情報</h2>
+        <div class="check-item"><label>検査日</label><span class="time">${examDate}</span></div>
+        ${arrive?`<div class="check-item"><label>来院時間</label><span class="time">${arrive}</span></div>`:''}
+        <div class="check-item"><label>使用する下剤</label><span class="time">${lax.name}</span></div>
+        <div class="check-item"><label>鎮静剤</label><span class="time">${sed==='y'?'使用する':'使用しない'}</span></div></section>`;
+      if(sed==='y') b+=`<section class="card"><p class="note">鎮静剤を使用するため、検査当日はお車・自転車・バイクの運転はできません。付き添いの方の来院、または公共交通機関でお越しください。</p></section>`;
+      if(phase==="prep") b+=`<section class="card"><h2>前処置を進めましょう</h2><button class="btn block" onclick="document.querySelector('[data-tab=prep]').click()">前処置チェックリストを開く</button></section>`;
+      else if(phase==="examday") b+=`<section class="card"><h2>本日が検査日です</h2><button class="btn block" onclick="document.querySelector('[data-tab=wash]').click()">当日の内服スケジュールを確認</button></section>`;
+      else if(phase==="recovery"||phase==="followup") b+=`<section class="card"><h2>体調の記録をつけましょう</h2><button class="btn block" onclick="document.querySelector('[data-tab=after]').click()">今日の記録を入力する</button></section>`;
+      return b;
+    }
+    function renderPrep(){
+      const good=FOOD.items.filter(f=>f.ok).map(f=>`<span class="food-chip">${f.n}</span>`).join("");
+      const avoid=FOOD.items.filter(f=>!f.ok).map(f=>`<span class="food-chip avoid">${f.n}</span>`).join("");
+      return `
+        <section class="card"><h2>検査前日の食事について</h2>
+          <p class="sub">夕食は19時までに。消化の良いものを少なめに。細かく調べたいときは「食べ物検索」タブへ。</p>
+          <div class="check-item"><label>食べて良いもの</label></div><div class="food-grid">${good}</div>
+          <div class="check-item" style="margin-top:14px;"><label>避けていただきたいもの</label></div><div class="food-grid">${avoid}</div>
+        </section>
+        <section class="card"><h2>前日 ${pre} の下剤内服</h2>
+          ${laxCode==='mp'?`
+            <div class="check-item ${local.checked.pre1?'done':''}"><input type="checkbox" id="chk-pre1" ${local.checked.pre1?'checked':''}><label for="chk-pre1">センノシド3錠をコップ1杯以上の水で服用</label></div>
+            <div class="check-item ${local.checked.pre2?'done':''}"><input type="checkbox" id="chk-pre2" ${local.checked.pre2?'checked':''}><label for="chk-pre2">ピコスルファート1本をコップ1杯以上の水に溶かして服用</label></div>
+            <p class="note">早い方は2時間後から排便が始まることがあります。</p>`
+          :`<p class="note">${lax.name}の前日内服については、お渡しした説明書・動画QRの内容に従ってください（詳細スケジュールは準備中です）。</p>`}
+        </section>
+        <section class="card"><h2>持ち物・確認事項</h2>
+          <div class="check-item ${local.checked.b1?'done':''}"><input type="checkbox" id="chk-b1" ${local.checked.b1?'checked':''}><label for="chk-b1">保険証・お薬手帳を準備した</label></div>
+          <div class="check-item ${local.checked.b2?'done':''}"><input type="checkbox" id="chk-b2" ${local.checked.b2?'checked':''}><label for="chk-b2">替えの下着を準備した</label></div>
+          <div class="check-item ${local.checked.b3?'done':''}"><input type="checkbox" id="chk-b3" ${local.checked.b3?'checked':''}><label for="chk-b3">血圧・心臓の薬など、事前に指示された薬を確認した</label></div>
+        </section>`;
+    }
+    function renderWash(){
+      if(laxCode!=='mp') return `<section class="card"><h2>${lax.name} 当日の内服</h2>
+        <p class="note">${lax.name}の詳細な内服スケジュールは準備中です。お渡しした説明書・動画QRの指示に従い、排便がほぼ透明になるまで内服してください。</p>
+        <p class="note warn">吐き気・腹痛・めまい・じんましんなどの症状が出た場合は内服を中止し、すぐにご連絡ください。</p></section>`;
+      const [h,m]=wash.split(":").map(Number);
+      const add=(bh,bm,a)=>{const t=bh*60+bm+a;return String(Math.floor(((t%1440)+1440)%1440/60)).padStart(2,'0')+":"+String(((t%60)+60)%60).padStart(2,'0');};
+      const b1=[0,10,20].map(o=>add(h,m,o)), rest=add(h,m,30), s2=add(h,m,50);
+      const [s2h,s2m]=s2.split(":").map(Number), b2=[0,10,20].map(o=>add(s2h,s2m,o));
+      return `
+        <section class="card"><h2>モビプレップ 服用スケジュール（目安）</h2>
+          <p class="sub">開始時刻 ${wash} を基準にした目安です。コップ1杯(約180〜200mL)を10〜15分かけて。</p>
+          ${b1.map(t=>`<div class="step-row"><span class="t">${t}</span><span>モビプレップ2杯 ＋ 水またはお茶1杯</span></div>`).join("")}
+          <div class="rest-note">まだ透明にならない場合は、20分休憩してから次へ（目安 ${rest}〜）</div>
+          ${b2.map(t=>`<div class="step-row"><span class="t">${t}</span><span>モビプレップ2杯 ＋ 水またはお茶1杯</span></div>`).join("")}
+          <p class="note">排便がほぼ透明〜薄い黄色の水様便になったら服用終了です。服用後は半量の水・お茶を飲むことを忘れずに。</p>
+          <p class="note warn">全量(2000mL)服用しても排便がない場合は、ご連絡ください。</p>
+        </section>`;
+    }
+    function renderAfter(){
+      const DS=["気分が悪い","吐き気がする／吐いた","お腹が痛い","顔が青ざめる","息苦しい","寒気がする","顔がむくむ","めまいがする","じんましんが出る"];
+      const logs=local.logs.length?local.logs.slice().reverse().map(l=>`<div class="log-entry"><div class="d">${l.date}</div><div class="tags">${l.tagsText.map(t=>`<span class="tag ${l.danger?'danger':''}">${t}</span>`).join("")}</div>${l.memo?`<div class="memo">${esc(l.memo)}</div>`:''}</div>`).join(""):`<p class="sub">まだ記録がありません。</p>`;
+      return `
+        <section class="card"><h2>今日の体調を記録</h2><p class="sub">当てはまるものをすべて選んでください</p>
+          <div class="seg" id="symptom-seg">${DS.map(s=>`<button data-v="${s}" class="danger-opt">${s}</button>`).join("")}<button data-v="変わりなし" class="ok-opt">変わりなし</button></div>
+          <label class="field">メモ（任意）</label><textarea id="log-memo" placeholder="気になることがあれば自由にご記入ください" style="min-height:64px;"></textarea>
+          <button class="btn block" id="btn-save-log" style="margin-top:14px;">この内容を記録する</button>
+          <p class="note warn">上記の症状がある場合は、記録だけで済ませず検査を受けた医療機関にすぐご連絡ください。</p></section>
+        <section class="card"><h2>これまでの記録</h2>${logs}</section>`;
+    }
+    function renderFood(){
+      return `
+        <section class="card"><h2>食べ物 OK / NG 検索</h2>
+          <p class="sub">検査前日の食事の目安です。食材名やカテゴリで調べられます。</p>
+          <input type="text" id="food-input" placeholder="例：すりおろしりんご／野菜／ジャム">
+          <div class="cat-chips" id="cat-chips">${FOOD.categories.map(c=>`<button data-cat="${c}">${c}</button>`).join("")}</div>
+          <div id="food-out"></div>
+          <p class="note">これは一般的な目安です。リストにないものや迷うものは、自己判断せず施設・主治医にご確認ください。</p>
+        </section>`;
+    }
+    function renderChat(){
+      const hist=local._chat&&local._chat.length?local._chat.map(m=>`<div class="msg ${m.role}">${esc(m.text)}</div>`).join("")
+        :`<div class="msg sys">大腸カメラの前処置・検査後について、一般的な質問にお答えします（デモ版・用意された想定問答が返ります）。緊急性のある症状は必ず医療機関へご連絡ください。</div>`;
+      return `
+        <section class="card"><h2>AIに質問</h2>
+          <div class="chat-log" id="chat-log">${hist}</div>
+          <div class="suggest-row" id="suggest">
+            <button>前日は水を飲んでもいい？</button>
+            <button>下剤が飲みにくい</button>
+            <button>血圧の薬は飲む？</button>
+            <button>いつまで下剤を飲むの？</button>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:10px;">
+            <textarea id="chat-input" placeholder="質問を入力" style="flex:1;min-height:44px;"></textarea>
+            <button class="btn" id="chat-send">送信</button>
+          </div>
+          <p class="note">デモ版のため、用意された質問に近い内容にのみ回答します。実際の病院版ではAIがその場で回答します。</p>
+        </section>`;
+    }
+
+    function wireChecklist(){
+      document.querySelectorAll('input[type=checkbox]').forEach(cb=>cb.addEventListener("change",()=>{
+        local.checked[cb.id.replace("chk-","")]=cb.checked; saveLocal(local);
+        cb.closest(".check-item").classList.toggle("done",cb.checked);
+      }));
+    }
+    function wireAfter(){
+      const seg=document.getElementById("symptom-seg"); if(!seg)return; const sel=new Set();
+      seg.querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{
+        if(b.classList.contains("ok-opt")){ seg.querySelectorAll("button").forEach(x=>x.classList.remove("sel","danger-sel")); sel.clear(); sel.add(b.dataset.v); b.classList.add("sel"); return; }
+        seg.querySelector(".ok-opt").classList.remove("sel"); sel.delete("変わりなし");
+        b.classList.toggle("sel"); b.classList.toggle("danger-sel",b.classList.contains("sel"));
+        if(b.classList.contains("sel"))sel.add(b.dataset.v); else sel.delete(b.dataset.v);
+      }));
+      document.getElementById("btn-save-log").addEventListener("click",()=>{
+        const memo=document.getElementById("log-memo").value.trim();
+        if(sel.size===0&&!memo){alert("症状の選択かメモのどちらかを入力してください。");return;}
+        const tagsText=[...sel], danger=tagsText.some(t=>t!=="変わりなし");
+        local.logs.push({date:new Date().toISOString().slice(0,10),tagsText,danger,memo}); saveLocal(local);
+        renderPatientApp(p); document.querySelector('[data-tab="after"]').click();
+      });
+    }
+    function wireFood(){
+      const input=document.getElementById("food-input"), out=document.getElementById("food-out");
+      function norm(s){return (s||"").toLowerCase().replace(/\s/g,"");}
+      function findItem(q){
+        const n=norm(q); if(!n)return null;
+        let hit=FOOD.items.find(f=>norm(f.n)===n||(f.kw||[]).some(k=>norm(k)===n));
+        if(hit)return hit;
+        hit=FOOD.items.find(f=>norm(f.n).includes(n)||n.includes(norm(f.n))||(f.kw||[]).some(k=>norm(k).includes(n)||n.includes(norm(k))));
+        return hit||null;
+      }
+      function renderItem(f){
+        const cls=f.confirm?"confirm":f.ok?"ok":"ng";
+        const label=f.confirm?"要確認":f.ok?"食べてOK":"避けて";
+        const icon=f.confirm?"？":f.ok?"○":"×";
+        return `<div class="food-result ${cls}"><div class="verdict">${icon} ${f.n}：${label}</div>
+          <div class="why">${f.why}</div>${f.alt?`<div class="alt">→ ${f.alt}</div>`:''}
+          ${f.confirm?`<div class="alt">迷う場合は施設にご確認ください。</div>`:''}</div>`;
+      }
+      function showCat(cat){
+        const sum=FOOD.category_summary[cat]||"";
+        const list=FOOD.items.filter(f=>f.c===cat);
+        const ok=list.filter(f=>f.ok&&!f.confirm).map(f=>`<span class="food-chip">${f.n}</span>`).join("");
+        const ng=list.filter(f=>!f.ok||f.confirm).map(f=>`<span class="food-chip avoid">${f.n}</span>`).join("");
+        out.innerHTML=`<div class="food-result ${/OK/.test(sum)?'':''}" style="background:var(--bg-alt);border-color:var(--line);">
+          <div class="verdict" style="color:var(--ink);">${cat}</div><div class="why">${sum}</div>
+          ${ok?`<div style="margin-top:10px;font-size:12px;color:var(--teal-deep);font-weight:700;">食べてOK</div><div class="food-grid">${ok}</div>`:''}
+          ${ng?`<div style="margin-top:10px;font-size:12px;color:var(--danger);font-weight:700;">避けて・要確認</div><div class="food-grid">${ng}</div>`:''}</div>`;
+      }
+      function search(q){
+        const item=findItem(q);
+        if(item){ out.innerHTML=renderItem(item); return; }
+        const cat=FOOD.categories.find(c=>norm(q).includes(norm(c)));
+        if(cat){ showCat(cat); return; }
+        out.innerHTML=`<div class="food-result confirm"><div class="verdict">？ 見つかりませんでした</div>
+          <div class="why">リストにない食材のようです。種・皮・繊維の多いもの（生野菜・海藻・きのこ・豆類など）は避けるのが基本ですが、迷う場合は自己判断せず施設・主治医にご確認ください。</div></div>`;
+      }
+      input.addEventListener("input",()=>{ if(input.value.trim())search(input.value.trim()); else out.innerHTML=""; });
+      document.querySelectorAll("#cat-chips button").forEach(b=>b.addEventListener("click",()=>{ input.value=""; showCat(b.dataset.cat); }));
+    }
+    function wireChat(){
+      const logEl=document.getElementById("chat-log"), input=document.getElementById("chat-input"), sendBtn=document.getElementById("chat-send");
+      if(!local._chat)local._chat=[];
+      logEl.scrollTop=logEl.scrollHeight;
+      function answer(text){
+        const n=text.toLowerCase();
+        let best=null,score=0;
+        FAQ.forEach(f=>{ const s=f.q.filter(k=>n.includes(k.toLowerCase())).length; if(s>score){score=s;best=f;} });
+        if(best&&score>0) return best.a;
+        return "この質問には、デモ版では用意された回答がありません。実際の病院版ではAIがその場でお答えします。緊急性のある症状は施設へご連絡ください。";
+      }
+      function append(role,text){ const el=document.createElement("div"); el.className="msg "+role; el.textContent=text; logEl.appendChild(el); logEl.scrollTop=logEl.scrollHeight; }
+      function send(text){
+        const t=(text||input.value).trim(); if(!t)return;
+        append("user",t); local._chat.push({role:"user",text:t});
+        const a=answer(t); append("ai",a); local._chat.push({role:"ai",text:a});
+        saveLocal(local); input.value="";
+      }
+      sendBtn.addEventListener("click",()=>send());
+      input.addEventListener("keydown",e=>{ if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();} });
+      document.querySelectorAll("#suggest button").forEach(b=>b.addEventListener("click",()=>send(b.textContent)));
+    }
+    function esc(s){ return s.replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+  }
+})();
+</script>
+</body>
+</html>
