@@ -233,6 +233,11 @@
   const app = document.getElementById("app");
   const params = qs();
 
+  const STORE_KEY = "colonoscopy-navi-demo-v3";
+  function loadLocal(){ try{const r=localStorage.getItem(STORE_KEY);return r?JSON.parse(r):{checked:{},logs:[]};}catch(e){return {checked:{},logs:[]};} }
+  function saveLocal(d){ try{localStorage.setItem(STORE_KEY,JSON.stringify(d));}catch(e){} }
+  let local = loadLocal();
+
   if(!params.has("date")) renderIssueScreen();
   else renderPatientApp(params);
 
@@ -331,11 +336,6 @@
   }
 
   // ============ 患者側 ============
-  const STORE_KEY = "colonoscopy-navi-demo-v3";
-  function loadLocal(){ try{const r=localStorage.getItem(STORE_KEY);return r?JSON.parse(r):{checked:{},logs:[]};}catch(e){return {checked:{},logs:[]};} }
-  function saveLocal(d){ try{localStorage.setItem(STORE_KEY,JSON.stringify(d));}catch(e){} }
-  let local = loadLocal();
-
   function renderPatientApp(p){
     const examDate=p.get("date"), arrive=p.get("arrive")||"", laxCode=p.get("lax")||"mp";
     const pre=p.get("pre")||"21:00", wash=p.get("wash")||"06:00", sed=p.get("sed")||"n";
